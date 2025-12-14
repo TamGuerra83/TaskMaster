@@ -1,113 +1,100 @@
+// app/index.tsx
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
-import { Text, TextInput, Button, Surface, IconButton } from 'react-native-paper';
+import { View, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, TextInput, Button, Surface } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
-
-const USERS = [
-  { username: 'admin', password: '123' },
-  { username: 'pepe',  password: '456' },
-  { username: 'maria', password: '789' }
-];
+import { ApiService } from '../services/api';
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secureText, setSecureText] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const { signIn } = useAuth();
-  const [error, setError] = useState('');
+  const router = useRouter();
 
-  const handleLogin = () => {
-    const valid = USERS.find(u => u.username === username && u.password === password);
-    if (valid) {
-      setError('');
-      signIn(username);
-    } else {
-      setError('Credenciales incorrectas. Intenta de nuevo.');
+  const handleAuth = async () => {
+    if (!email || !password) return Alert.alert("Error", "Completa los campos");
+    setLoading(true);
+    try {
+      if (isRegistering) {
+        await ApiService.register(email, password);
+        Alert.alert("¡Éxito!", "Cuenta creada. Ingresa ahora.");
+        setIsRegistering(false);
+      } else {
+        await signIn(email, password);
+        // Router replace para evitar volver atrás
+        router.replace('/(tabs)/home');
+      }
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Ocurrió un error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.content}>
-        
-        
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-             <IconButton icon="check-decagram" iconColor="#4F46E5" size={50} style={{ margin: 0 }} />
-          </View>
-          <Text variant="displaySmall" style={styles.title}>TaskMaster</Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>Gestión inteligente de tareas</Text>
+      <View style={styles.backgroundCircle} />
+      
+      <Surface style={styles.card} elevation={4}>
+        <View style={styles.logoContainer}>
+          <Text style={{fontSize: 40}}>🚀</Text>
         </View>
+        <Text variant="headlineMedium" style={styles.title}>TaskMaster</Text>
+        <Text style={styles.subtitle}>{isRegistering ? "Únete a nosotros" : "Bienvenido de nuevo"}</Text>
 
-   
-        <Surface style={styles.card} elevation={4}>
-          <TextInput
-            label="Nombre de Usuario"
-            value={username}
-            onChangeText={setUsername}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="account-circle-outline" color="#4F46E5" />}
-            outlineColor="transparent"
-            activeOutlineColor="#4F46E5"
-            placeholder="Ej. admin"
-            placeholderTextColor="#94A3B8"
-          />
+        <TextInput
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          mode="outlined"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={styles.input}
+          outlineStyle={{borderRadius: 12}}
+        />
+        <TextInput
+          label="Contraseña"
+          value={password}
+          onChangeText={setPassword}
+          mode="outlined"
+          secureTextEntry
+          style={styles.input}
+          outlineStyle={{borderRadius: 12}}
+        />
 
-          <TextInput
-            label="Contraseña"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={secureText}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="lock-outline" color="#4F46E5" />}
-            right={<TextInput.Icon icon={secureText ? "eye-off" : "eye"} onPress={() => setSecureText(!secureText)} />}
-            outlineColor="transparent"
-            activeOutlineColor="#4F46E5"
-          />
+        <Button 
+          mode="contained" 
+          onPress={handleAuth} 
+          loading={loading} 
+          style={styles.btnMain}
+          contentStyle={{height: 50}}
+        >
+          {isRegistering ? "Registrarse" : "Ingresar"}
+        </Button>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          <Button 
-            mode="contained" 
-            onPress={handleLogin} 
-            style={styles.button} 
-            contentStyle={{ height: 56 }} 
-            labelStyle={{ fontSize: 18, fontWeight: 'bold' }}
-          >
-            INGRESAR
-          </Button>
-        </Surface>
-
-      </View>
+        <Button mode="text" onPress={() => setIsRegistering(!isRegistering)} style={styles.btnSecondary}>
+          {isRegistering ? "Volver al Login" : "¿No tienes cuenta? Regístrate"}
+        </Button>
+      </Surface>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { flex: 1, justifyContent: 'center', padding: 24 },
-  
-
-  header: { alignItems: 'center', marginBottom: 40 }, 
-  iconContainer: { backgroundColor: '#EEF2FF', borderRadius: 50, marginBottom: 15, padding: 5 },
-  
-  title: { 
-    fontWeight: '900', 
-    color: '#1E293B', 
-    letterSpacing: -1,
-    textAlign: 'center' 
+  container: { flex: 1, backgroundColor: '#4F46E5', justifyContent: 'center', padding: 20 },
+  backgroundCircle: {
+    position: 'absolute', top: -100, left: -50, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  subtitle: { 
-    color: '#64748B', 
-    marginTop: 5, 
-    fontSize: 16,
-    textAlign: 'center'
+  card: { padding: 30, borderRadius: 24, backgroundColor: 'white', alignItems: 'center' },
+  logoContainer: {
+    width: 80, height: 80, backgroundColor: '#EEF2FF', borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 16
   },
-
-  card: { padding: 32, borderRadius: 28, backgroundColor: 'white' },
-  input: { marginBottom: 16, backgroundColor: '#EEF2FF' },
-  button: { marginTop: 16, borderRadius: 16, elevation: 4, shadowColor: '#4F46E5' },
-  errorText: { color: '#EF4444', marginBottom: 10, fontWeight: 'bold', textAlign: 'center' }
+  title: { fontWeight: 'bold', color: '#1E293B', marginBottom: 5 },
+  subtitle: { color: '#64748B', marginBottom: 20 },
+  input: { width: '100%', marginBottom: 15, backgroundColor: 'white' },
+  btnMain: { width: '100%', marginTop: 10, borderRadius: 12, backgroundColor: '#4F46E5' },
+  btnSecondary: { marginTop: 15 },
 });

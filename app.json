@@ -2,6 +2,7 @@
   "expo": {
     "name": "mi-todo-app",
     "slug": "mi-todo-app",
+    "scheme": "mitodoapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",

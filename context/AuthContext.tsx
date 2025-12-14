@@ -1,48 +1,67 @@
+// context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ApiService } from '../services/api';
 
-interface AuthContextType {
-  user: string | null;
-  signIn: (user: string) => void;
+type AuthContextType = {
+  session: string | null;
+  isLoading: boolean;
+  signIn: (email: string, pass: string) => Promise<void>;
   signOut: () => void;
-}
+};
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType>({} as any);
+
+export function useAuth() { return useContext(AuthContext); }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<string | null>(null);
+  const [session, setSession] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
 
-  const signIn = (username: string) => {
-    setUser(username);
-    router.replace('/(tabs)/home');
-  };
-
-  const signOut = () => {
-    setUser(null);
-    router.replace('/');
-  };
+  useEffect(() => {
+    const loadSession = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      setSession(token);
+      setIsLoading(false);
+    };
+    loadSession();
+  }, []);
 
   useEffect(() => {
-    const inAuthGroup = segments[0] === '(tabs)';
+    if (isLoading) return;
+    const inAuthGroup = segments[0] === '(auth)';
     
-    if (!user && inAuthGroup) {
-      router.replace('/');
-    } else if (user && segments[0] === undefined) {
-      router.replace('/(tabs)/home');
+    if (!session && !inAuthGroup) {
+      router.replace('/'); 
+    } else if (session && (inAuthGroup || segments.length === 0)) {
+      router.replace('/(tabs)/home'); // Ir a Home
     }
-  }, [user, segments]);
+  }, [session, isLoading, segments]);
+
+  const signIn = async (email: string, pass: string) => {
+    const data = await ApiService.login(email, pass);
+    if (data.token) {
+      setSession(data.token);
+      await AsyncStorage.setItem('userToken', data.token);
+      
+      
+      const idUsuario = data.userId || (data.user && data.user.id);
+      if (idUsuario) await AsyncStorage.setItem('userId', idUsuario);
+    }
+  };
+
+  const signOut = async () => {
+    await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('userId');
+    setSession(null);
+  };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, isLoading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
 }
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth debe usarse dentro de un AuthProvider');
-  return context;
-};

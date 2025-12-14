@@ -1,20 +1,31 @@
 
+
 export interface LocationData {
-    latitude: number;
-    longitude: number;
-  }
-  
-  export interface Task {
+  latitude: number;
+  longitude: number;
+}
+
+export interface Task {
+  id: string;
+  userId: string;
+  title: string;
+  completed: boolean;
+  location?: LocationData;
+  photoUri?: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  userId?: string;
+  user?: {
     id: string;
-    title: string;
-    imageUri: string; // Ruta local del sistema de archivos
-    location: LocationData;
-    isCompleted: boolean;
-    userId: string; // Para asociar la tarea al usuario
-  }
-  
- 
-  export interface User {
-    username: string;
-    isAuthenticated: boolean;
-  }
+    email: string;
+  };
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: string;
+}
